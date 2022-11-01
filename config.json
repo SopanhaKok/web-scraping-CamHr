@@ -1,0 +1,4 @@
+{
+  "driver": "driver/chromedriver",
+  "web_base_url": "https://www.camhr.com"
+}
