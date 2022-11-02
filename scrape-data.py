@@ -41,7 +41,7 @@ class DataScraper():
     def main(self):
         urlList = []
         informations = []
-        page = 1
+        page = 65
         while True:
             url = f'https://www.camhr.com/a/job?page={page}&param={{"page":{page},"size":50}}'
             self.driver.get(url)
@@ -143,7 +143,7 @@ class DataScraper():
                 print(info)
 
             df = pd.DataFrame(informations)
-            # df.to_csv("camHr.csv")
+            df.to_csv("camHr.csv")
             
         self.driver.quit()
 
