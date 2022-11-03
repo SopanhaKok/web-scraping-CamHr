@@ -41,7 +41,7 @@ class DataScraper():
     def main(self):
         urlList = []
         informations = []
-        page = 65
+        page = 1
         while True:
             url = f'https://www.camhr.com/a/job?page={page}&param={{"page":{page},"size":50}}'
             self.driver.get(url)
