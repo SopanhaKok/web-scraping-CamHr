@@ -1,0 +1,4 @@
+pytz==2025.2
+rnet==2.2.1
+selectolax==0.3.29
+asyncio==3.4.3

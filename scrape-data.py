@@ -1,159 +1,89 @@
-from  selenium import webdriver
-import os
-import json
-from bs4 import BeautifulSoup
-import pandas as pd
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
+from source.camHR.extractor import Extractor
+from datetime import datetime
+import pytz
+import csv
 
+from colorama import Fore, Style
+import asyncio
 
-
-class DataScraper():
-    def __init__(self):
-        self.base_path = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
-        if os.path.isfile(self.base_path + '/config.json'):
-            with open(self.base_path + '/config.json') as config:
-                self.config = json.load(config)
-        self.driver = webdriver.Chrome(self.base_path + '/' + self.config['driver'])
-
-    def getUrlPerPage(self):
-        urlList = []
-        soup = BeautifulSoup(self.driver.page_source,"html.parser")
-        jobs_list = soup.find('div',class_='jobs-list')
-        job_items = jobs_list.find_all('div',class_="job-item")
-        for job in job_items:
-            anchorElement = job.find('a',class_="job-title")
-            url =  self.config['web_base_url'] + '/a' + anchorElement["href"][1:]
-            urlList.append(url)
-        return urlList
-
-    def hasNextPage(self,currentPage):
-        soup = BeautifulSoup(self.driver.page_source,"html.parser")
-        paginationElement = soup.find('ul',class_="el-pager")
-        liElement = paginationElement.find_all('li',class_="number")
-        lastPage = liElement[-1].text
-        if str(currentPage) == lastPage:
-            return False
-        return True
-
+camHRExtractor = Extractor()
+async def main():
+    keyword = input(
+        f"{Fore.CYAN}Enter the keyword you want to search: {Style.RESET_ALL}"
+    )
     
-    def main(self):
-        urlList = []
-        informations = []
-        page = 1
-        while True:
-            url = f'https://www.camhr.com/a/job?page={page}&param={{"page":{page},"size":50}}'
-            self.driver.get(url)
-            try:
-                waitForJobItem = WebDriverWait(self.driver,10).until(EC.presence_of_all_elements_located((By.CLASS_NAME,'job-item')))
-            except:
-                continue
-            urls = self.getUrlPerPage()
-            urlList.extend(urls)
-            if self.hasNextPage(page):
-                page += 1
-            else:
-                break
-         # Step 2 Get detail information of every posts from URL Lists
-        for url in urlList:
-            self.driver.get(url)
-            mainInfo =  WebDriverWait(self.driver,10).until(EC.presence_of_element_located((By.CLASS_NAME,'job-maininfo')))
-            soup = BeautifulSoup(self.driver.page_source,"html.parser")
+    now = datetime.now(pytz.timezone('Asia/Bangkok')) 
 
+    page = 1
+    limit = 50
+    totalPage = 0
+    items = []
 
-            jobTitle = soup.find("span",class_='job-name-span').text
+    while True:
+        url = f'https://api.camhr.com/v1.0.0/jobs?page={page}&size={limit}&locationId=0&jobTitleOrCompany={keyword}'
 
-            table = soup.find("table",class_="mailTable")
-            tableData = table.find_all("td")
+        res = await camHRExtractor.fetch_json_async(url)
+        data = res["data"]
+        totalPage = data["totalPage"]
+        page += 1 
 
-            level = tableData[0].text
-            term = tableData[1].text
-            yearOfExp = tableData[2].text 
-            function = tableData[3].text 
-            hiring = tableData[4].text 
-            industry = tableData[5].text 
-            salary =  tableData[6].text 
-            qualification=  tableData[7].text 
-            sex =  tableData[8].text 
-            language =  tableData[9].text 
-            age =  tableData[10].text 
-            location = tableData[11].text
-            print(level,term,yearOfExp,function,hiring,industry,salary,qualification,sex,language,age)
-            print(url,end="\n")
-            try:
-                jobDescription = soup.find_all('div',class_='job-descript')
-                if len(jobDescription) == 2:
-                    description = jobDescription[0].find('div',class_="descript-list").text
-                    jobRequirement = jobDescription[1].find('div',class_="descript-list").text
-                else:
-                    title = jobDescription[0].find('div',class_="descript-title").text
-                    if title == 'Job Requirements':
-                        jobRequirement = jobDescription[0].find('div',class_="descript-list").text
-                        description = ""
-                    else:
-                        description = jobDescription[0].find('div',class_="descript-list").text
-                        jobRequirement = ""
-            except: 
-                description = ""
-                jobRequirement = ""
+        jobs = data["result"]
+
+        for job in jobs:
+            exp_date = datetime.fromisoformat(job["expdate"])
+
+            if exp_date < now: 
+                continue  # Skip expired jobs but continue processing other jobs
+                
+            publish_date = datetime.fromisoformat(job.get('pubdate', ''))
+            job_data = {
+                'title': job.get('title', ''),
+                'term': job.get('termId', {}).get('label',''),
+                'hiring': job.get('hirelings','~'),
+                'work_experience': job.get('workyears', ''),
+                'age': f'From {job.get('ageFrom', '~')} To {job.get('ageTo','~')}',
+                "sex": job.get('sex',{}).get('label',''),
+                'location': job.get('location',''),
+                'qualification': job.get('qualificationId', {}).get('label', ''),
+                'requirement': job.get('requirement', ''),
+                'description': job.get('description', ''),
+                'publish_date': publish_date.strftime("%B %d, %Y at %I:%M %p"),
+                'expiration_date': exp_date.strftime("%B %d, %Y at %I:%M %p"),
+                'address': job.get('address', ''),
+                'is_urgent': job.get('is_urgent', False),
+                'contact_name': job.get('contact', {}).get('name', ''),
+                'contact_phone': job.get('contact', {}).get('telephone', ''),
+                'contact_email': job.get('contact', {}).get('email', ''),
+                'salary': job.get('salaryId', {}).get('label', ''),
+               
+                'major': job.get('major', '')
+            }
             
+            items.append(job_data)
             
-
-            jobDetail =  soup.find_all('div',class_='jobdetail-item')
-            try:
-                companyProfile = jobDetail[0].find('div',class_="company-info").text
-            except:
-                companyProfile = ""
+            print(f"{Fore.GREEN}Found job: {job_data['title']}{Style.RESET_ALL}")
             
+        if page > totalPage: 
+            break
 
-            if companyProfile:
-                companyContact = jobDetail[1].find('div',class_="recruiter-info")
-            else:
-                companyContact = jobDetail[0].find('div',class_="recruiter-info")
-            recruiterName = companyContact.find('span',class_="recruiter-name").text
-            recruiterJob = companyContact.find('span',class_="recruiter-job").text
-
-            recruiterInformation = companyContact.find("div",class_="recruiter-baseinfo")
-            recruiterInformation = recruiterInformation.find_all("a",class_="d-inline-block")
-            try:
-                recruiterNumber = recruiterInformation[0].text
-            except:
-                recruiterNumber = ""
-            try:
-                recruiterEmail = recruiterInformation[1].text
-            except:
-                recruiterEmail = ""
-            try:
-                recruiterLocation = recruiterInformation[2].text
-            except:
-                recruiterLocation = ""
-
-            print(recruiterEmail,recruiterNumber,recruiterLocation,recruiterName,recruiterJob)
-            sendDate = soup.find("div",class_="send-date")
-            publishedDate = sendDate.find("span").text
-            closeDate = sendDate.find("span",class_="close-date").text
-            contact = f'Contact Information {recruiterName} {recruiterJob} {recruiterNumber} {recruiterEmail} {recruiterLocation} {recruiterNumber}'
-            information = {"jobUrl": url,"job title":jobTitle,"position": jobTitle,"Level":level,"Year of Exp":yearOfExp,"Hiring":hiring,"Salary":salary,"Sex":sex,"Age":age,"Term":term,"Function/Category":function
-            ,"Industry":industry,"Qualification":qualification,"Language":language,"Location":location,"Job Description":description,"Job Requirement":jobRequirement,"Company Profile":companyProfile,"Publish Date":publishedDate,"Closing Date":closeDate,
-            "Contact Info": contact}
-            informations.append(information)
-
-            for info in informations:
-                print(info)
-
-            df = pd.DataFrame(informations)
-            df.to_csv("camHr.csv")
-            
-        self.driver.quit()
-
-
+    csv_filename = f"{keyword}_{now.strftime('%d%m%Y')}.csv"
     
+    with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
+        fieldnames = list(items[0].keys()) if items else []
+        
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        writer.writeheader()
+        
+        for job in items:
+            writer.writerow(job)
+    
+    print(f"{Fore.CYAN}Successfully saved {len(items)} jobs to {csv_filename}{Style.RESET_ALL}")
+
 
 
 if __name__ == "__main__":
-    scraper = DataScraper()
-    scraper.main()
+    asyncio.run(main())
 
    
 

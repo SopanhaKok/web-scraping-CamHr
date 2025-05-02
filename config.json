@@ -1,4 +1,0 @@
-{
-  "driver": "driver/chromedriver.exe",
-  "web_base_url": "https://www.camhr.com"
-}

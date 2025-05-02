@@ -1,54 +1,69 @@
-# web-scraping-CamHr
+# CamHR Job Scraper
 
-## Introduction
+A Python tool for scraping job listings from the CamHR website (https://www.camhr.com) using their API.
 
-Job searching analysis is the process of scraping data from popular websites in Cambodia such as Bongthom, CamHr, Pel Prek or National Employment Agency websites etc. It involves collecting and recording job-related data such as knowledge and skills required to perform a job, duties and responsibilities involved, education qualifications and experience required and physical and emotional characteristics required to perform a job in a desired manner.
-We set up job data scraping processes to automatically extract newly posted jobs from the popular website and have more data to analyze. There are a number of techniques such as using Chrome extension , Python using libraries etc. So we will use the Web Scraper Chrome extension/ Python to scrape the data.
+## Purpose
 
-## Project Objective
+This tool helps job seekers save time and effort when searching for jobs on CamHR. Instead of manually clicking through dozens of pages and job postings, this script automatically collects all relevant job listings in one place. It uses direct API requests rather than browser automation, making it much faster and more efficient than older web scraping methods.
 
-1. To have an overview what is the job needs (June & July Vs August & September)
-2. Identifying reskilling and up-skilling opportunities.
-3. To understand which job is required for ICT.
-4. To see the trend of job demand or the comparison between June & July and next two months
+With this tool, you can quickly find job opportunities that match your skills and interests without the tedious process of manual searching. All results are saved in a CSV file that you can easily sort, filter, and review at your convenience.
 
-## Project Set up
+## Features
 
-### Programming
+- Search for jobs using custom keywords
+- Filter out expired job listings automatically
+- Convert ISO format dates to human-readable format
+- Export results to CSV in a specified output directory
+- Handle missing fields gracefully
+- Colorful terminal output for better user experience
 
-In this project we use python programming `version: 3.9.7` to scraping data from the website [CamHR](https://www.camhr.com/).
+## Installation
 
-### Library
+1. Clone this repository:
+   git clone https://github.com/SopanhaKok/web-scraping-CamHr
+   cd web-scraping-CamHr
 
-In this project we use [Selenium](https://selenium-python.readthedocs.io/) `version: 3` and [BeautifulSoup](https://beautiful-soup-4.readthedocs.io/en/latest/#quick-start) for scraping the data.
+2. Install the required packages:
+   pip install -r requirements.txt
 
-To install Selenium:
+## Usage
 
-```shell
-pip install selenium
-```
+Run the script with Python:
+python scrape-data.py
 
-To install BeautifulSoup
+The script will:
 
-```shell
-pip install beautifulsoup4
-```
+1. Ask you to enter a keyword to search for jobs
+2. Search for jobs base on your keyword
+3. Filter out expired jobs
+4. Save the results to a CSV file in this format {keyword}\_{date}.csv
 
-### Tools
+## Code Structure
 
-#### **Broswer**
+- `scrape-data.py` - Main script that handles the job search and CSV export
+- `camHr/extractor.py` - Contains the `Extractor` class that handles API requests
 
-For the browser we use Chrome and Chrome driver to help us for open the website and inspecting for scraping the data.
+## Sample Output
 
-> To install Chrome driver click [here](https://chromedriver.chromium.org/downloads).
+The CSV file will have the following columns:
 
-#### **Power BI**
+- `title` - Job title
+- `publish_date` - When the job was published
+- `expiration_date` - When the job posting expires
+- `address` - Job location
+- `requirement` - Job requirements
+- `description` - Job description
+- `is_urgent` - Whether the job is marked as urgent
+- `contact_name` - Contact person's name
+- `contact_phone` - Contact phone number
+- `contact_email` - Contact email address
+- `salary` - Salary information
+- `qualification` - Required qualifications
+- `major` - Required major/field of study
+- `age` - Age requirements (if specified)
 
-This is the desktop application for Data Cleaning and Data virtualization.
+## Notes
 
-> To install Power BI click [here](https://www.microsoft.com/en-us/download/details.aspx?id=58494).
-
-## Data
-
-Here is the data set that we have scrape with arround 3000 rows.
-Click here to get the [data](https://docs.google.com/spreadsheets/d/1ZMNntYZ2ZKOes8lZ_q6Zn2Nou1D5a1SQKyd2fi9yJx4/edit#gid=936442396).
+- Only non-expired jobs will be included in the results
+- The script uses the Asia/Bangkok timezone for date comparisons
+- The default output directory is in the current working directory
